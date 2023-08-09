@@ -32,7 +32,7 @@ void ADC_init()
 	Clear_Bit(ADMUX_REG,REFS1);
 	
 	/*2- we work at 8 bit */
-	Set_Bit(ADMUX_REG,ADLAR);
+//	Set_Bit(ADMUX_REG,ADLAR);
 	//Clear_Bit(ADMUX_REG,ADLAR);
 	/*3- select Prescaler*/
 	ADCSRA_REG&= ADCSRA_MASK ;  //we need to sure the last 3 bit =0
@@ -43,7 +43,7 @@ void ADC_init()
 
 uint8 ADC_Start_Conversion(uint8 channel)
 {
-	uint8 ADC;
+	//uint8 ADC;
 	/*1- select the channel*/
 	ADMUX_REG &= ADMUX_MASK;   
 	ADMUX_REG|= channel;
@@ -54,8 +54,8 @@ uint8 ADC_Start_Conversion(uint8 channel)
 	/*4- we need to clear flag manually BEC we don't use interrupt*/
 	Set_Bit(ADCSRA_REG,ADIF);
 	/* read result*/
-	ADC= ADCH;
-	return ADC;
+	//ADC= ADCH;
+	return ADC_T;
 }
 
 
@@ -213,7 +213,7 @@ void __vector_16(void)
 	else // ISR source is chain conversion
 	{
 		/*read the conversion result*/
-		ADC_ConversionResult[ADC_ChainIndex]=ADCH;
+		ADC_ConversionResult[ADC_ChainIndex]=ADC_T;
 		
 		/* inc the index to get the next channel result*/
 		ADC_ChainIndex++;

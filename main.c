@@ -2,6 +2,8 @@
  * AMIT.c
  *
  * Created: 2/17/2023 7:48:36 PM
+ * version: 1.1
+ * last update : 8/8/2023 6:29:47 PM 
  * Author : Ahmed Nour
  */ 
 
@@ -33,16 +35,18 @@
 #define EEPROM_take_temp_location	103
 #define EEPROM_ideal_temp_location	100
 
-uint8 max_temp= 75 , min_temp= 35 , ideal_temp= 59 ,counter=30;
-uint8 take_temp=0 , i=0,avr=0 , avr_temp=0;
+uint8 max_temp= 75 , min_temp= 35 , ideal_temp= 60 ,counter=30;
+uint8 take_temp=0 , i=0 , avr_temp=0;
 uint8  current_temp =0;
-uint16 Summation=0 ;
+uint16 Summation=0 ,avr=0 ;
 uint8 temp_EEPROM =0;
+// the state var used to sure that you get the optimum temp and go to block state 
+// the block state it s the region that the heater didn*t take action after reach the optimum temp
+uint8 state=0;
 void temp_inter();
 int main(void)
 {
 	
-
 	// on off button
 	Button_init(button_power, PORTD);
 	// Heating led
@@ -79,7 +83,8 @@ int main(void)
 		// get the button state on -off
 		if(Button_read(button_power, PORTC)==0)
 		{ // if button is off
-
+			
+			LCD_Clear(); // lcd off (clear)
 			//led heating off
 			led_off(led_Heating, PORTD);
 			// led power off
@@ -103,7 +108,7 @@ int main(void)
 			if (take_temp==0 && (temp_EEPROM==0xFF))
 			{
 				// the value inside EEProm
-				if (current_temp<=ideal_temp-5)  // current < 60-5
+				if ((current_temp<ideal_temp) && (state==0) )  // current < 60-5
 				{
 					// open the heater ( i.e blinking)
 					led_blink(led_Heating, PORTD);
@@ -111,7 +116,7 @@ int main(void)
 				
 					
 				}
-				else if (current_temp>ideal_temp+5)
+				else if ((current_temp>ideal_temp) && (state==0))
 				{
 					// open the cooler ( i.e blinking)
 					led_on(led_Heating, PORTD);
@@ -119,19 +124,36 @@ int main(void)
 				
 				}
 				else if (current_temp==ideal_temp)
-				{
+				{	
 					// the temp go to the right temp
 					// NOTE : after reading 10 time and take the (avr) turn off or on
 					// cal the avr temp if avr == current temp == the take temp
 					for(i=0;i<10;i++)
 					{
 		//				temp_cal(&current_temp);
-						Summation+=current_temp;  // 10 reading
+						Summation+=(uint8)current_temp;  // 10 reading
 
 					}
 					avr= Summation/10;
-					if(avr==take_temp)
+					if(avr==ideal_temp)
 					{
+						
+						while(current_temp>(ideal_temp-5)&&current_temp<(ideal_temp+5))
+						{
+							state=1;
+							timer0_setCallBack(temp_inter);
+							
+							LCD_Clear();
+							// send the temp value to lcd
+							LCD_sendString("temp: ");
+							// send the temp value to lcd
+							LCD_VoidIntgerToString(current_temp);
+							if ( ! (temp_EEPROM==0xFF))
+							{
+								break;	
+							}
+						}
+						state=0;
 						led_off(led_Heating, PORTD);
 						Summation=0;
 						avr=0;
@@ -143,14 +165,14 @@ int main(void)
 			// if the button up or down pressed
 			else if ( ! (temp_EEPROM==0xFF))   // ie counter == eeprom read
 			{
-				
+				counter = temp_EEPROM;
 				// show the value of the temp that be take from user
 					LCD_ChangePOS_XY(0,1);
 					LCD_sendString("temp: ");
 					LCD_VoidIntgerToString(temp_EEPROM);
 
 				// check the value of the temp that take from user ( i.e button up or down )
-				if ((current_temp<(take_temp-5)))
+				if ((current_temp<temp_EEPROM) && (state==0))
 				{
 					// open the heater ( i.e blinking)
 					led_blink(led_Heating, PORTD);
@@ -158,13 +180,13 @@ int main(void)
 					
 			
 				}
-				if (current_temp>take_temp+5)
+				if ((current_temp>temp_EEPROM) && (state==0))
 				{
 					// open the cooler ( i.e blinking)
 					led_on(led_Heating, PORTD);
 
 				}
-				else if (current_temp==take_temp)
+				else if (current_temp==temp_EEPROM)
 				{
 					// the temp go to the right temp
 					// NOTE : after reading 10 time and take the (avr) turn off or on
@@ -176,11 +198,29 @@ int main(void)
 						
 					}
 					avr= Summation/10;
-					if(avr==take_temp)
+					if(avr==temp_EEPROM)
 					{
 						led_off(led_Heating, PORTD);
+						while(temp_EEPROM>(current_temp-5) && temp_EEPROM<(current_temp+5))
+						{
+							LCD_Clear();
+							state=1;
+							timer0_setCallBack(temp_inter);
+							// send the temp value to lcd
+							LCD_sendString("temp: ");
+							// send the temp value to lcd
+							LCD_VoidIntgerToString(current_temp);
+							
+							// show the value of the temp that be take from user
+							LCD_ChangePOS_XY(0,1);
+							LCD_sendString("temp: ");
+							LCD_VoidIntgerToString(temp_EEPROM);
+							
+						}
+						
 						Summation=0;
 						avr=0;
+						state=0;
 					}
 				}
 			}
@@ -229,9 +269,9 @@ void temp_inter()
 		uint16 volatile reading , analog;
 		// start conversion and save in reading
 		reading= ADC_Start_Conversion(pin0);
-		//analog = (uint32)(reading)*(5000)/(uint32)(256);
+		analog = ((uint32)reading*5000)/(1023);
 		// temp equation for the simulation 
-		analog = (uint32)(reading)* (500.0 / 1023.0*500)/12;
+		//analog = (uint32)(reading)* (500.0 / 1023.0*500)/12;
 		// the temp after cal
 		current_temp=analog/10;
 		//reset the counter for new 100 ms

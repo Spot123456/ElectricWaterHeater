@@ -27,17 +27,17 @@
 
 // this function to calculate the temp in the simulation for lm35
 // i use the 8 bit for adc conversion 
-
+/*
 void temp_cal(uint8 *copy_address_temp)
 {	uint16 volatile reading , analog;
 	//_delay_ms(100);
 	reading= ADC_Start_Conversion(pin0);
 	_delay_ms(100);
-	//analog = (uint32)(reading)*(5000)/(uint32)(256); // the right equation from data sheet (*1000) for increase the sensitivity
-	analog = (uint32)(reading)* (500.0 / 1023.0*500)/12;
+	analog = (uint32)(reading)*(5000)/(uint32)(256); // the right equation from data sheet (*1000) for increase the sensitivity
+	//analog = (uint32)(reading)* (500.0 / 1023.0*500)/12;
 	
 	*copy_address_temp=analog/10;
-}
+}*/
 
 // this function for count up the button from the user to cal the temp that take from user
 void button_up(uint8 * counter,uint8 * max_temp)

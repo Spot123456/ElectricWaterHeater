@@ -11,7 +11,7 @@
 
 #define EEPROM_FIXED_ADDRESS 0b1010000
 
-#define A2_Connection 0
+#define A2_Connection 0  // gnd
 
 
 #endif /* EEPROM_PRIVATE_H_ */
